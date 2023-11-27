@@ -7,7 +7,26 @@ const csvParser = require("csv-parser");
 const fs = require("fs");
 const path = require("path");
 const util = require("util");
-const authMiddleware = require("./auth");
+const { v4: uuidv4 } = require("uuid");
+const {
+  authMiddleware,
+  loadTokens,
+  saveTokens,
+  encryptToken,
+} = require("./auth");
+const bodyParser = require("body-parser");
+
+app.use(bodyParser.json());
+app.use(authMiddleware);
+let token = loadTokens();
+
+token[
+  process.env.DEVELOPMENT ? process.env.EMAIL_AUTH_DEV : process.env.EMAIL_AUTH
+] = encryptToken(
+  process.env.DEVELOPMENT ? process.env.TOKEN_AUTH_DEV : process.env.TOKEN_AUTH
+);
+
+saveTokens(token, "admin");
 
 const PORT = process.env.PORT || 3000;
 
@@ -22,11 +41,6 @@ if (!fs.existsSync(path.dirname(logFilePath))) {
 // Abre el archivo de registro en modo append
 const logStream = fs.createWriteStream(logFilePath, { flags: "a" });
 const originalConsoleLog = console.log;
-// // Sobrescribe el método console.log para redirigir la salida al archivo
-// console.log = (...args) => {
-//   const logMessage = `${new Date().toISOString()} - ${util.format(...args)}\n`;
-//   logStream.write(logMessage);
-// };
 
 // Función personalizada para manejar console.log y escribir en el archivo
 const customLogger = (...args) => {
@@ -98,10 +112,6 @@ const handleCSVUpload = (req, res) => {
     const allowedExtensions = ["csv"];
     const fileExtension = req.file.originalname.split(".").pop();
     if (!allowedExtensions.includes(fileExtension)) {
-      // return res.status(400).json({
-      //   error: "error",
-      //   message: "El archivo debe tener extensión .csv",
-      // });
       reject({
         error: "error",
         message: "El archivo debe tener extensión .csv",
@@ -110,10 +120,6 @@ const handleCSVUpload = (req, res) => {
 
     // Acceder al archivo cargado
     const uploadedFile = req.file;
-    // console.log(
-    //   "🚀 ~ file: server.js:42 ~ handleCSVUpload ~ uploadedFile:",
-    //   uploadedFile
-    // );
 
     // Realizar acciones con el archivo, por ejemplo, analizar el archivo CSV
     const delimiter = ";"; // Definir el delimitador esperado
@@ -139,7 +145,6 @@ const handleCSVUpload = (req, res) => {
 };
 
 app.post("/upload", upload.single("data"), (req, res) => {
-  console.log("asdfadsf", req.user);
   handleCSVUpload(req, res)
     .then((filePathName) => {
       deleteFilesInFolder(uploadsFolderPath);
@@ -154,15 +159,56 @@ app.post("/upload", upload.single("data"), (req, res) => {
       return res.status(500).json(error);
     });
 });
-// const uuid = require("uuid");
-// // Ruta POST para generar y devolver un Bearer Token único
-// app.post("/generar-token", (req, res) => {
-//   const bearerToken = uuid.v4(); // Genera un UUID v4 como token único
 
-//   // Puedes almacenar el token como sea necesario para su uso posterior
-//   // En este ejemplo, simplemente lo mostramos en la respuesta
-//   res.json({ bearerToken });
-// });
+// Ruta POST para generar y devolver un Bearer Token único
+app.post("/generar-token", (req, res) => {
+  const data = req.body;
+  if (!data.email_admin) {
+    return res.status(400).json({ message: "Falta el campo email_admin" });
+  }
+  if (!data.email) {
+    return res.status(400).json({ message: "Falta el email" });
+  }
+
+  const email_admin = data.email_admin;
+  const email = data.email;
+
+  // Verificar las credenciales del admin
+  const adminEmail = process.env.DEVELOPMENT
+    ? process.env.EMAIL_AUTH_DEV
+    : process.env.EMAIL_AUTH;
+  const adminToken = process.env.DEVELOPMENT
+    ? process.env.TOKEN_AUTH_DEV
+    : process.env.TOKEN_AUTH;
+
+  // Obtener el token del encabezado de autorización
+  const authHeader = req.header("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res
+      .status(401)
+      .json({ message: "Acceso no autorizado. Falta el token Bearer." });
+  }
+  const token = authHeader.substring(7); // "Bearer " tiene 7 caracteres
+
+  if (email_admin === adminEmail && token === adminToken) {
+    // Crear un nuevo token UUID
+    const newToken = uuidv4();
+
+    // Cargar los tokens desde el archivo JSON
+    let tokens = loadTokens();
+
+    // Guardar el nuevo token en el archivo JSON
+    tokens[email] = encryptToken(newToken);
+    saveTokens(tokens, email);
+
+    return res.json({ email, token: newToken });
+  } else {
+    return res.status(401).json({
+      message:
+        "Credenciales incorrectas. Verifique el bearer token o el email_admin",
+    });
+  }
+});
 
 app.get("/api/bill", (req, res) => {
   const filePath = "./data.csv";
@@ -172,7 +218,7 @@ app.get("/api/bill", (req, res) => {
   console.log("🚀 ~ file: server.js:15 ~ app.get ~ parsedData:", parsedData);
   const bill = toBill(parsedData);
   console.log("🚀 ~ file: server.js:17 ~ app.get ~ bill:", bill);
-  res.json(bill);
+  return res.json(bill);
 });
 app.get("/api", (req, res) => {
   const options = {

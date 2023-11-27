@@ -6,8 +6,42 @@ const multer = require("multer");
 const csvParser = require("csv-parser");
 const fs = require("fs");
 const path = require("path");
+const util = require("util");
+const authMiddleware = require("./auth");
 
 const PORT = process.env.PORT || 3000;
+
+// Ruta del archivo de registro
+const logFilePath = path.join(__dirname, "logs", "consoleLogs.txt");
+
+// Verifica si el directorio de logs existe, si no, créalo
+if (!fs.existsSync(path.dirname(logFilePath))) {
+  fs.mkdirSync(path.dirname(logFilePath), { recursive: true });
+}
+
+// Abre el archivo de registro en modo append
+const logStream = fs.createWriteStream(logFilePath, { flags: "a" });
+const originalConsoleLog = console.log;
+// // Sobrescribe el método console.log para redirigir la salida al archivo
+// console.log = (...args) => {
+//   const logMessage = `${new Date().toISOString()} - ${util.format(...args)}\n`;
+//   logStream.write(logMessage);
+// };
+
+// Función personalizada para manejar console.log y escribir en el archivo
+const customLogger = (...args) => {
+  const logMessage = `${new Date().toISOString()} - ${util.format(...args)}\n`;
+
+  // Llamar al console.log original
+  originalConsoleLog(...args);
+
+  // Escritura en el archivo de registro
+  logStream.write(logMessage);
+};
+
+// Sobrescribe el método console.log con la función personalizada
+console.log = customLogger;
+
 const uploadsFolderPath = path.join(__dirname, "uploads");
 
 // Configuración de multer para manejar la carga de archivos
@@ -32,7 +66,7 @@ const upload = multer({
 const deleteFilesInFolder = (folderPath) => {
   fs.readdir(folderPath, (err, files) => {
     if (err) {
-      console.error("Error al leer el directorio:", err);
+      console.log("Error al leer el directorio:", err);
     }
 
     // Iterar sobre los archivos y eliminar cada uno
@@ -41,7 +75,7 @@ const deleteFilesInFolder = (folderPath) => {
 
       fs.unlink(filePath, (unlinkErr) => {
         if (unlinkErr) {
-          console.error(`Error al eliminar el archivo ${filePath}:`, unlinkErr);
+          console.log(`Error al eliminar el archivo ${filePath}:`, unlinkErr);
         } else {
           console.log(`Archivo temporal ${filePath} eliminado.`);
         }
@@ -98,13 +132,14 @@ const handleCSVUpload = (req, res) => {
         resolve(rows);
       })
       .on("error", (error) => {
-        console.error("Error al analizar el archivo CSV:", error);
+        console.log("Error al analizar el archivo CSV:", error);
         reject("Error al analizar el archivo CSV");
       });
   });
 };
 
 app.post("/upload", upload.single("data"), (req, res) => {
+  console.log("asdfadsf", req.user);
   handleCSVUpload(req, res)
     .then((filePathName) => {
       deleteFilesInFolder(uploadsFolderPath);
@@ -114,11 +149,20 @@ app.post("/upload", upload.single("data"), (req, res) => {
       });
     })
     .catch((error) => {
-      console.error("Error al analizar el archivo CSV:", error);
+      console.log("Error al analizar el archivo CSV:", error);
       deleteFilesInFolder(uploadsFolderPath);
       return res.status(500).json(error);
     });
 });
+// const uuid = require("uuid");
+// // Ruta POST para generar y devolver un Bearer Token único
+// app.post("/generar-token", (req, res) => {
+//   const bearerToken = uuid.v4(); // Genera un UUID v4 como token único
+
+//   // Puedes almacenar el token como sea necesario para su uso posterior
+//   // En este ejemplo, simplemente lo mostramos en la respuesta
+//   res.json({ bearerToken });
+// });
 
 app.get("/api/bill", (req, res) => {
   const filePath = "./data.csv";
@@ -288,6 +332,19 @@ const readCSV = (filePath) => {
   return data;
 };
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
+});
+
+// Cerrar el stream cuando el servidor se cierra
+server.on("close", () => {
+  logStream.end();
+  console.log("Stream cerrado. Hasta luego.");
+});
+
+// Manejar eventos de cierre de la aplicación
+process.on("SIGINT", () => {
+  server.close(() => {
+    process.exit(0);
+  });
 });

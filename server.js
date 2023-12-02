@@ -205,10 +205,6 @@ app.post("/generar-token", (req, res) => {
 
 app.post("/upload", upload.single("data"), (req, res) => {
   handleCSVUpload(req, res).then((filePathName) => {
-    console.log(
-      "🚀 ~ file: server.js:200 ~ handleCSVUpload ~ filePathName:",
-      filePathName
-    );
     deleteFilesInFolder(uploadsFolderPath);
     if (filePathName.length < 1) {
       return res.status(400).json({
@@ -238,7 +234,6 @@ app.post("/upload", upload.single("data"), (req, res) => {
               obj.status === "active" &&
               obj.isDefault === true
           )
-          // .filter((obj) => obj.name === "Documento soporte")
           .map((obj) => ({ id: obj.id, nextNumber: obj.nextInvoiceNumber }));
 
         const objectRequest = transformData(
@@ -246,11 +241,10 @@ app.post("/upload", upload.single("data"), (req, res) => {
           idNumeration[0].id,
           idNumeration[0].nextNumber
         );
-        // const objectRequest = transformData(groupedData, "10");
-        console.log(
-          "🚀 ~ file: server.js:234 ~ .then ~ objectRequest:",
-          objectRequest
-        );
+        // console.log(
+        //   "🚀 ~ file: server.js:234 ~ .then ~ objectRequest:",
+        //   objectRequest
+        // );
         const pageSize = 2;
         const i = 0;
         sendBatchPromise(i, objectRequest)
@@ -267,68 +261,9 @@ app.post("/upload", upload.single("data"), (req, res) => {
             });
           })
           .catch((error) => {
-            console.log("Error al enviar el batch:", error);
-            console.log(
-              "Error al enviar el batch: -------------------------------",
-              error.response.data
-            );
+            console.log("Error al enviar el request: ", error.response.data);
             return res.status(500).json(error.response.data);
           });
-        // objectRequest.forEach((item) => {
-        //   sendBatch(item)
-        //     .then((response) => {
-        //       console.log("Batch sent successfully:", response.data);
-        //       i++;
-        //     })
-        //     .catch((error) => {
-        //       console.log("Error al enviar el batch:", error);
-        //       console.log(
-        //         "Error al enviar el batch: -------------------------------",
-        //         error.response.data
-        //       );
-        //       return res.status(500).json(error.response.data);
-        //     });
-        // });
-        // if (objectRequest.length === i) {
-        //   return res.status(200).json({
-        //     message: "Archivo cargado correctamente.",
-        //     filePath: objectRequest,
-        //   });
-        // } else {
-        //   return res.status(500).json({
-        //     message: "Error al enviar el batch.",
-        //   });
-        // }
-        // Llamada a la función para enviar datos paginados
-        //   sendPaginatedData(objectRequest, pageSize)
-        //     .then((responses) => {
-        //       responses.forEach((response) => {
-        //         console.log("Batch sent successfully:", response.data);
-        //       });
-        //     })
-        //     .then(() => {
-        //       return res.status(200).json({
-        //         message: "Archivo cargado correctamente.",
-        //         filePath: objectRequest,
-        //       });
-        //     })
-        //     .catch((error) => {
-        //       console.log("🚀 ~ file: server.js:246 ~ .then ~ error:", error);
-        //       console.error(
-        //         "Error sending paginated data:",
-        //         error.response.data
-        //       );
-        //       return res.status(500).json(error.response.data);
-        //     });
-        //   // return res.status(200).json({
-        //   //   message: "Archivo cargado correctamente.",
-        //   //   filePath: objectRequest,
-        //   // });
-        // })
-        // .catch((error) => {
-        //   console.log("Error al obtener el id de numeracion", error);
-        //   return res.status(500).json(error);
-        // });
       })
       .catch((error) => {
         console.log("Error al analizar el archivo CSV:", error);
@@ -338,7 +273,10 @@ app.post("/upload", upload.single("data"), (req, res) => {
   });
 });
 
-app.post("/", (req, res) => {
+app.get("/", (req, res) => {
+  res.send("Hello AeroRental!");
+});
+app.post("/consultar-numeracion", (req, res) => {
   getNumberTemplate()
     .then((response) => {
       const idNumeration = response.data
@@ -360,89 +298,6 @@ app.post("/", (req, res) => {
       console.log("Error al obtener el id de numeracion", error);
       return res.status(500).json(error);
     });
-  // data: {
-  //   numberTemplate: { id: "20" },
-  //   purchases: {
-  //     items: [
-  //       {
-  //         id: 118,
-  //         name: "",
-  //         discount: 0,
-  //         quantity: 1,
-  //         observations: "Billetera de cuero negro",
-  //         price: 1,
-  //         subtotal: null,
-  //         tax: [],
-  //       },
-  //       {
-  //         id: 118,
-  //         name: "",
-  //         discount: 0,
-  //         observations: "otraaaa",
-  //         quantity: 1,
-  //         tax: [],
-  //         price: 1,
-  //       },
-  //     ],
-  //   },
-  //   // currency: { code: "USD", symbol: "$", exchangeRate: 2950 },
-  //   paymentType: "CASH",
-  //   paymentMethod: "CASH",
-  //   billOperationType: "INDIVIDUAL",
-  //   date: "2023-29-11",
-  //   dueDate: "2023-05-12",
-  //   provider: 679,
-  //   // retentions: [],
-  //   stamp: { generateStamp: true },
-  // },
-
-  // const options = {
-  //   method: "POST",
-  //   url: "https://sandbox.alegra.com:26967/api/v1/bills",
-  //   headers: {
-  //     accept: "application/json",
-  //     "content-type": "application/json",
-  //     authorization:
-  //       "Basic YWVyb3JlbnRhbCthbGVncmFAYWxlZ3JhLmNvbTo5YzBjNWU3MTExYTIwMjkyZjAyNA==",
-  //   },
-  //   data: {
-  //     numberTemplate: { id: "20" },
-  //     purchases: {
-  //       items: [
-  //         {
-  //           id: 118,
-  //           discount: 0,
-  //           observations: "Billetera de cuero negro",
-  //           price: 1,
-  //           quantity: 1,
-  //           tax: [],
-  //         },
-  //       ],
-  //     },
-  //     stamp: { generateStamp: true },
-  //     paymentType: "CASH",
-  //     billOperationType: "INDIVIDUAL",
-  //     date: "2023-11-30",
-  //     dueDate: "2023-12-05",
-  //     observations: "test subida newwwww",
-  //     provider: 679,
-  //     paymentMethod: "CASH",
-  //     retentions: [],
-  //   },
-  // };
-
-  // axios
-  //   .request(options)
-  //   .then(function (response) {
-  //     // console.log(JSON.parse(response.data));
-  //     return res.json(response.data);
-  //   })
-  //   .catch(function (error) {
-  //     console.error(error);
-  //     console.error(error.response.data);
-  //     return res.json(error.response.data);
-  //   });
-  // res.send("Hello AeroRental!");
 });
 
 const validateFields = (data) => {
@@ -704,72 +559,6 @@ const sendPaginatedData = async (dataArray, pageSize) => {
 };
 
 //_----------------------------------------------------------------------------------------------
-app.get("/api/bill", (req, res) => {
-  const filePath = "./data.csv";
-  const csvData = readCSV(filePath);
-  // console.log("🚀 ~ file: server.js:13 ~ app.get ~ csvData:", csvData);
-  const parsedData = parseCSV(csvData);
-  console.log("🚀 ~ file: server.js:15 ~ app.get ~ parsedData:", parsedData);
-  const bill = toBill(parsedData);
-  console.log("🚀 ~ file: server.js:17 ~ app.get ~ bill:", bill);
-  return res.json(bill);
-});
-
-const parseCSV = (csvData) => {
-  const rows = csvData.split("\n");
-  const headers = rows[0].split(";");
-  console.log("🚀 ~ file: server.js:22 ~ parseCSV ~ headers:", headers);
-  rows.shift();
-  rows.pop();
-  console.log("🚀 ~ file: server.js:23 ~ parseCSV ~ rows:", rows);
-  const columns = rows[0].split(";");
-  // console.log("🚀 ~ file: server.js:28 ~ parseCSV ~ columns:", columns);
-  const parsedData = rows.map((row) => {
-    const data = row.split(";");
-    return Object.fromEntries(
-      headers.map((column, index) => [column, data[index]])
-    );
-  });
-  return parsedData;
-};
-
-const toBill = (parsedData) => {
-  const data = parsedData.map((row) => {
-    console.log("🚀 ~ file: server.js:41 ~ data ~ row:", row);
-    return {
-      purchases: {
-        items: {
-          id: row.id,
-          price: row.price,
-          quantity: row.quantity,
-          discount: row.discount,
-          name: row.name,
-          observations: row.observations,
-        },
-      },
-      date: row.date,
-      dueDate: row.dueDate,
-      termsConditions: row.termsConditions,
-      paymentMethod: row.paymentMethod,
-      paymentType: row.paymentType,
-      billOperationType: row.billOperationType,
-      provider: row.provider,
-      // retentions: row.retentions.map((roww) => {
-      //   return {
-      //     id: roww.id,
-      //     amount: roww.amount,
-      //   };
-      // }),
-    };
-  });
-  return data;
-};
-
-const readCSV = (filePath) => {
-  const fs = require("fs");
-  const data = fs.readFileSync(filePath, "utf8");
-  return data;
-};
 
 const server = app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);

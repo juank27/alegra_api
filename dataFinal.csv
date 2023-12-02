@@ -1,4 +1,0 @@
-id;date;dueDate;observations;provider;purchases_id;purchases_name;purchases_discount;purchases_observations;purchases_price;purchases_quantity;purchases_total;purchases_subtotal;tax_id;tax_name;tax_percentage;tax_type;tax_status;retentions_id;retentions_amount;currency_code;currency_symbol;currency_exhangeRate;paymentMethod;paymentType;billOperationType;physicalDocument;stamp
-1;01/09/2023;01/10/2023;Test;15;118;;;;1;1;1;;;;;;;;;USD;$;2950;CASH;CASH;INDIVIDUAL;;true
-1;01/09/2023;01/10/2023;Test;15;118;;;;1;1;1;;;;;;;;;USD;$;2951;CASH;CASH;INDIVIDUAL;;true
-5;01/09/2023;01/10/2023;Test;15;118;;;;1;1;1;;;;;;;;;USD;$;2952;CASH;CASH;INDIVIDUAL;;true
